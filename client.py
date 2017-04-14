@@ -64,7 +64,7 @@ class Client(Node):
     def pull_file(self, filename, source_uname, source_ip):
         my_file = Node.get_dest_path(filename, self.username)
         self.pulled_files.add(my_file)
-        proc = subprocess.Popen(['scp', "%s@%s:%s" % (source_uname, source_ip, filename), my_file])
+        proc = subprocess.Popen(['scp -r', "%s@%s:%s" % (source_uname, source_ip, filename), my_file])
         return_status = proc.wait()
         logger.debug("returned status %s", return_status)
 

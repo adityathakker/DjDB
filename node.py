@@ -39,7 +39,7 @@ class Node(object):
 
     @staticmethod
     def push_file(filename, dest_uname, dest_ip):
-        proc = subprocess.Popen(['scp', filename, "%s@%s:%s" % (dest_uname, dest_ip, Node.get_dest_path(filename, dest_uname))])
+        proc = subprocess.Popen(['scp -r', filename, "%s@%s:%s" % (dest_uname, dest_ip, Node.get_dest_path(filename, dest_uname))])
         return_status = proc.wait()
         logger.debug("returned status %s",return_status)
 
