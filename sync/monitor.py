@@ -19,7 +19,7 @@ def setup_logging(log_filename):
 
 def get_watch_dirs(config, user_name):
     watch_dirs = []
-    for key, value in config.items('djdb.dirs'):
+    for key, value in config.items('djdb.dir'):
         dir = os.path.expanduser(value.strip())
         my_dir = Node.get_dest_path(dir, user_name)
         watch_dirs.append(my_dir)
