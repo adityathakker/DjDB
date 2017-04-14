@@ -3,6 +3,8 @@ import pickle
 import errno
 import time
 
+__author__ = 'dushyant'
+
 class FileData(object):
 
     def __init__(self, file_name, time):
@@ -11,6 +13,9 @@ class FileData(object):
 
 
 class PersistentSet(object):
+    """
+    override set to add persistence using pickle
+    """
     def __init__(self, pkl_filename):
         self.pkl_filename = pkl_filename
         self.timestamp = None
@@ -49,15 +54,29 @@ class PersistentSet(object):
             return timestamp
         except EOFError:
             return 0
+#        try:
+#            return os.path.getmtime(self.pkl_filename)
+#        except OSError as e:
+#            if e.errno == errno.ENOENT: #file doesn't exit
+#                return 0
+#            else:
+#                raise
 
     def update_modified_timestamp(self):
+        """
+        update last sync time
+        """
         pkl_object = open(self.pkl_filename, 'wb')
         pickle.dump(self.set, pkl_object)
+        #push current time
         pickle.dump(time.time, pkl_object)
         pkl_object.close()
 
 
 class FilesPersistentSet(PersistentSet):
+    """
+    override set to add persistence using pickle
+    """
     def __init__(self, pkl_filename):
         super(FilesPersistentSet, self).__init__(pkl_filename)
 

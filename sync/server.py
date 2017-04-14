@@ -9,6 +9,8 @@ import subprocess
 import os
 import rpc
 
+__author__ = 'dushyant'
+
 logger = logging.getLogger('djdb')
 
 
@@ -21,25 +23,27 @@ def is_collision_file(filename):
 
 
 class ClientData(object):
+    """Data corresponding to each client residing in server object"""
     def __init__(self, client_uname, client_ip, client_port):
         self.available = False
-        self.mfiles = PersistentSet('server-%s.pkl' % (client_uname))
+        self.mfiles = PersistentSet('server-%s.pkl'%(client_uname))
         self.uname = client_uname
         self.ip = client_ip
         self.port = client_port
 
-
 class Server(Node):
+    """Server class"""
     def __init__(self, role, ip, port, uname, watch_dirs, clients):
         super(Server, self).__init__(role, ip, port, uname, watch_dirs)
         self.clients = clients
 
     def req_push_file(self, filedata, source_uname, source_ip, source_port):
-        logger.debug("server filedata %s %s", filedata['name'], filedata.keys())
+        """Mark this file as to be notified to clients - this file 'filename' has been modified, pull the latest copy"""
+        logger.debug("server filedata %s %s",filedata['name'], filedata.keys())
         my_file = Node.get_dest_path(filedata['name'], self.username)
+        #check if there is a conflict
         if self.check_collision(filedata):
-            server_filename = "%s.backup.%s.%s.%s:%s" % (
-            my_file, filedata['time'], source_uname, source_ip, source_port)
+            server_filename = "%s.backup.%s.%s.%s:%s"%(my_file, filedata['time'], source_uname, source_ip, source_port)
         else:
             server_filename = my_file
 
@@ -47,11 +51,12 @@ class Server(Node):
         return server_filename
 
     def ack_push_file(self, server_filename, source_uname, source_ip, source_port):
+        """Mark this file as to be notified to clients - this file 'filename' has been modified, pull the latest copy"""
         if is_collision_file(server_filename):
             return
 
         for client in self.clients:
-            logger.debug("tuple %s : %s", (client.ip, client.port), (source_ip, source_port))
+            logger.debug("tuple %s : %s",(client.ip, client.port), (source_ip, source_port))
             if (client.ip, client.port) == (source_ip, source_port):
                 continue
             else:
@@ -61,8 +66,8 @@ class Server(Node):
     def check_collision(self, filedata):
         my_file = Node.get_dest_path(filedata['name'], self.username)
         try:
-            collision_exist = os.path.getmtime(my_file) > filedata['time']
-            logger.debug("collision check: server time %s  client time %s", os.path.getmtime(my_file), filedata['time'])
+           collision_exist = os.path.getmtime(my_file) > filedata['time']
+           logger.debug("collision check: server time %s  client time %s", os.path.getmtime(my_file), filedata['time'])
         except OSError as e:
             if e.errno == errno.ENOENT:
                 collision_exist = False
@@ -72,11 +77,12 @@ class Server(Node):
         return collision_exist
 
     def sync_files(self):
+        """Actual call to clients to pull files"""
         while True:
             try:
                 time.sleep(10)
                 for client in self.clients:
-                    logger.debug("list of files for client %s, availability %s", client.mfiles.list(), client.available)
+                    logger.debug( "list of files for client %s, availability %s",client.mfiles.list(), client.available)
                     if client.available:
                         for file in client.mfiles.list():
                             rpc_status = rpc.pull_file(client.ip, client.port, file, self.username, self.ip)
@@ -89,7 +95,9 @@ class Server(Node):
             except KeyboardInterrupt:
                 break
 
+
     def mark_presence(self, client_ip, client_port):
+        """Mark client as available"""
         logger.debug("mark available call received")
         for client in self.clients:
             if (client_ip, client_port) == (client.ip, client.port):
@@ -104,19 +112,22 @@ class Server(Node):
             self.add_client_keys(client)
 
     def get_authfile(self):
-        return os.path.join("/home", self.username, ".ssh/authorized_keys")
+        return os.path.join("/home",self.username,".ssh/authorized_keys")
 
     def add_client_keys(self, client):
-        authfile = self.get_authfile()
+        """ Add public keys corresponding to user """
+        authfile =  self.get_authfile()
         client_pub_key = rpc.get_client_public_key(client.ip, client.port)
 
         if client_pub_key is None:
             return
 
-        with open(authfile, 'a+') as fp:
+        with open(authfile,'a+') as fp:
             if client_pub_key not in fp.readlines():
                 fp.write(client_pub_key + '\n')
 
     def activate(self):
+        """ Activate Server Node """
         super(Server, self).activate()
         self.find_available_clients()
+

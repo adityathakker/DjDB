@@ -5,6 +5,8 @@ import re
 import subprocess
 import threading
 
+__author__ = 'dushyant'
+
 logger = logging.getLogger('djdb')
 
 class Handler(SimpleXMLRPCRequestHandler):
@@ -19,6 +21,7 @@ class Handler(SimpleXMLRPCRequestHandler):
 
 
 class Node(object):
+    """Base class for client and server"""
 
     def __init__(self, role , ip, port, uname, watch_dirs):
         self.role = role
@@ -29,6 +32,7 @@ class Node(object):
 
     @staticmethod
     def get_dest_path(filename, dest_uname):
+        """ Replace username in filename with 'dest_uname'"""
         user_dir_pattern = re.compile("/home/[^ ]*?/")
 
         if re.search(user_dir_pattern, filename):
@@ -39,16 +43,19 @@ class Node(object):
 
     @staticmethod
     def push_file(filename, dest_uname, dest_ip):
-        proc = subprocess.Popen(['scp -r', filename, "%s@%s:%s" % (dest_uname, dest_ip, Node.get_dest_path(filename, dest_uname))])
+        """push file 'filename' to the destination """
+        proc = subprocess.Popen(['scp', filename, "%s@%s:%s" % (dest_uname, dest_ip, Node.get_dest_path(filename, dest_uname))])
         return_status = proc.wait()
         logger.debug("returned status %s",return_status)
 
     def ensure_dir(self):
+        """create directories to be synced if not exist"""
         for dir in self.watch_dirs:
             if not os.path.isdir(dir):
                 os.makedirs(dir)
 
     def start_server(self):
+        """Start RPC Server on each node """
         server = SimpleXMLRPCServer(("0.0.0.0", self.port), allow_none =True)
         server.register_instance(self)
         server.register_introspection_functions()

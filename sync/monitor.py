@@ -11,6 +11,7 @@ logger = logging.getLogger('djdb')
 
 def setup_logging(log_filename):
     handler = logging.FileHandler(log_filename)
+#    handler = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
     print 'Logging started on file %s' % log_filename
@@ -18,11 +19,11 @@ def setup_logging(log_filename):
 
 def get_watch_dirs(config, user_name):
     watch_dirs = []
-    for key, value in config.items('djdb.dir'):
+    for key, value in config.items('djdb.dirs'):
         dir = os.path.expanduser(value.strip())
         my_dir = Node.get_dest_path(dir, user_name)
         watch_dirs.append(my_dir)
-    logger.debug("watched dir %s", watch_dirs)
+    logger.debug("watched dirs %s", watch_dirs)
     return watch_dirs
 
 
@@ -41,10 +42,11 @@ def get_server_tuple(config):
 
 
 def main():
+    #use argparse to get role, ip, port and user name
     parser = argparse.ArgumentParser(
-        description="""DjDB Sync""",
+        description="""DjDB""",
         formatter_class=argparse.RawDescriptionHelpFormatter)
-
+    
     parser.add_argument(
         '-ip', help='Specify the ip address of this machine', required=True)
 
@@ -53,25 +55,27 @@ def main():
 
     parser.add_argument(
         '-uname', help='Specify the user name of this machine', required=True)
-
+    
     parser.add_argument(
         '-role', help='Specify the role of this machine - client or server', required=True)
-
+    
     args = parser.parse_args()
 
+    #start logging
     setup_logging("djdb.log.%s-%s" % (args.ip, args.port));
     logger = logging.getLogger('djdb')
 
+    #Read config file
     config = ConfigParser.ConfigParser()
     logger.info("Using config file: djdb.cfg")
-    config.read('djdb.cfg')
+    config.read('../djdb.cfg')
 
-    if args.role == 'server':
+    if (args.role == 'server'):
         node = Server(args.role, args.ip, int(args.port), args.uname, get_watch_dirs(config, args.uname), get_clients(config))
     else:
         node = Client(args.role, args.ip, int(args.port), args.uname, get_watch_dirs(config, args.uname), get_server_tuple(config))
 
     node.activate()
-
+    
 if __name__ == "__main__":
     main()

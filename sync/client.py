@@ -9,10 +9,14 @@ import os
 from node import Node
 from persistence import FileData, FilesPersistentSet
 
+__author__ = 'dushyant'
 
 logger = logging.getLogger('djdb')
 
+
+#Find which files to sync
 class PTmp(ProcessEvent):
+    """Find which files to sync"""
 
     def __init__(self, mfiles, rfiles, pulledfiles):
         self.mfiles = mfiles
@@ -46,29 +50,34 @@ class PTmp(ProcessEvent):
             self.pulled_files.remove(filename)
 
 class Client(Node):
+    """Client class"""
 
     def __init__(self, role, ip, port, uname, watch_dirs, server):
         super(Client, self).__init__(role, ip, port, uname, watch_dirs)
         self.server = server
         self.mfiles = FilesPersistentSet(pkl_filename = 'client.pkl') #set() #set of modified files
-        self.rfiles = set()
+        self.rfiles = set() #set of removed files
         self.pulled_files = set()
         self.server_available = True
 
     def push_file(self, filename, dest_file, dest_uname, dest_ip):
+        """push file 'filename' to the destination"""
+#        dest_file = Node.get_dest_path(filename, dest_uname)
         proc = subprocess.Popen(['scp', filename, "%s@%s:%s" % (dest_uname, dest_ip, dest_file)])
         push_status = proc.wait()
         logger.debug("returned status %s", push_status)
         return push_status
 
     def pull_file(self, filename, source_uname, source_ip):
+        """pull file 'filename' from the source"""
         my_file = Node.get_dest_path(filename, self.username)
         self.pulled_files.add(my_file)
-        proc = subprocess.Popen(['scp -r', "%s@%s:%s" % (source_uname, source_ip, filename), my_file])
+        proc = subprocess.Popen(['scp', "%s@%s:%s" % (source_uname, source_ip, filename), my_file])
         return_status = proc.wait()
         logger.debug("returned status %s", return_status)
 
     def get_public_key(self):
+        """Return public key of this client"""
         pubkey = None
         pubkey_dirname = os.path.join("/home",self.username,".ssh")
         logger.debug("public key directory %s", pubkey_dirname)
@@ -87,6 +96,7 @@ class Client(Node):
         return pubkey
 
     def find_modified(self):
+        """Find all those files which have been modified when sync demon was not running"""
         for directory in self.watch_dirs:
             dirwalk = os.walk(directory)
 
@@ -98,11 +108,13 @@ class Client(Node):
                 file_path = os.path.join(dirname,filename)
                 logger.debug("checked file if modified before client was running: %s", file_path)
                 mtime = os.path.getmtime(file_path)
+                #TODO save and restore last_synctime
                 if mtime > self.mfiles.get_modified_timestamp():
                     logger.debug("modified before client was running %s", file_path)
                     self.mfiles.add(file_path, mtime)
 
     def sync_files(self):
+        """Sync all the files present in the mfiles set and push this set"""
         mfiles = self.mfiles
         while True:
             try:
@@ -128,7 +140,9 @@ class Client(Node):
                 break
 
     def watch_files(self):
+        """keep a watch on files present in sync directories"""
         wm = WatchManager()
+        # watched events
         mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY
         notifier = pyinotify.Notifier(wm, PTmp(self.mfiles, self.rfiles, self.pulled_files))
 
@@ -146,6 +160,7 @@ class Client(Node):
                 break
 
     def start_watch_thread(self):
+        """Start threads to find modified files """
         watch_thread = threading.Thread(target=self.watch_files)
         watch_thread.start()
         logger.info("Thread 'watchfiles' started ")
@@ -157,6 +172,7 @@ class Client(Node):
         logger.debug("find modified files")
 
     def activate(self):
+        """ Activate Client Node """
         super(Client, self).activate()
         self.start_watch_thread()
         self.mark_presence()

@@ -4,7 +4,7 @@ import os
 import utils
 import pickle
 
-CLIENT_ID = 2
+CLIENT_ID = 1
 
 config = ConfigParser.ConfigParser()
 config.read('djdb.cfg')
@@ -15,16 +15,18 @@ djdb_dir = os.path.expanduser(djdb_dir)
 # utils.update_latency(djdb_dir)
 
 db = Database(CLIENT_ID)
-db.create_database("temp")
-db.create_table("temp", "temp_table")
+# db.create_database("temp")
+# db.create_table("temp", "temp_table")
 # db.delete_table("temp", "temp_table")
 # db.delete_database("temp")
 
+# db.lock_table("temp", "temp_table", "w")
 # db.insert_document("temp", "temp_table", {"name": "Aditya", "age": 20})
 # db.insert_document("temp", "temp_table", {"name": "Adityaa", "age": 200})
 # db.insert_document("temp", "temp_table", {"name": "Adityaaa", "age": 2000})
-
+# db.unlock_table("temp", "temp_table")
 # db.delete_document("temp", "temp_table", 1)
 
-
-# db.select_document("temp", "temp_table")
+db.lock_table("temp", "temp_table", "r")
+db.select_document("temp", "temp_table")
+db.unlock_table("temp", "temp_table")
