@@ -1,0 +1,14 @@
+Using config file: djdb.cfg
+destpath /home/adityajthakker/sync_test1
+watched dir ['/home/adityajthakker/sync_test1']
+Thread 'syncfiles' started 
+server functions on rpc [('system.methodSignature', <bound method SimpleXMLRPCServer.system_methodSignature of <SimpleXMLRPCServer.SimpleXMLRPCServer instance at 0x7f4b274953b0>>), ('system.methodHelp', <bound method SimpleXMLRPCServer.system_methodHelp of <SimpleXMLRPCServer.SimpleXMLRPCServer instance at 0x7f4b274953b0>>), ('system.listMethods', <bound method SimpleXMLRPCServer.system_listMethods of <SimpleXMLRPCServer.SimpleXMLRPCServer instance at 0x7f4b274953b0>>)]
+Started RPC server thread. Listening on port 8082...
+Thread 'watchfiles' started 
+client call to mark available to the server
+rpc call to mark available
+watched dir ['/home/adityajthakker/sync_test1']
+Problem connecting to rpc - no rpc server running. function: mark_presence
+find modified files
+checked file if modified before client was running: /home/adityajthakker/sync_test1/hello2
+checked file if modified before client was running: /home/adityajthakker/sync_test1/hello
