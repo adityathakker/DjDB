@@ -20,7 +20,7 @@ db = Database(CLIENT_ID)
 # db.delete_table("temp", "temp_table")
 # db.delete_database("temp")
 
-# db.lock_table("temp", "temp_table", "w")
+# db.lock_table("temp", "temp_table", "w", wait=True)
 # db.insert_document("temp", "temp_table", {"name": "Aditya", "age": 20})
 # db.insert_document("temp", "temp_table", {"name": "Adityaa", "age": 200})
 # db.insert_document("temp", "temp_table", {"name": "Adityaaa", "age": 2000})
@@ -28,5 +28,7 @@ db = Database(CLIENT_ID)
 # db.delete_document("temp", "temp_table", 1)
 
 db.lock_table("temp", "temp_table", "r")
-db.select_document("temp", "temp_table")
+db.select_document("temp", "temp_table", columns=["name", "age"])
 db.unlock_table("temp", "temp_table")
+
+# db.detect_deadlock()
