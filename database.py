@@ -163,8 +163,8 @@ class Database:
                 if wait:
                     if "waiting" not in info["tables"][table_name]:
                         info["tables"][table_name]["waiting"] = list()
-
-                    info["tables"][table_name]["waiting"].append(self.client_id)
+                    if self.client_id  not in info["tables"][table_name]["waiting"]:
+                        info["tables"][table_name]["waiting"].append(self.client_id)
                     with open(self.djdb_dir + "/meta_" + db_name + ".pkl", "wb") as meta:
                         pickle.dump(info, meta)
                         meta.close()
@@ -173,6 +173,7 @@ class Database:
                     if self.detect_deadlock():
                         print "deadlock detected"
                         return
+                    print "waiting"
                     self.lock_table(db_name, table_name, mode, wait=True)
                 else:
                     print "table is already locked by client " + str(info["tables"][table_name]["locked_by"])
@@ -187,6 +188,7 @@ class Database:
                 info["tables"][table_name]["locked"] = False
                 del info["tables"][table_name]["locked_by"]
                 del info["tables"][table_name]["lock_type"]
+                # del info["waiting"][table_name]["waiting"]
                 with open(self.djdb_dir + "/meta_" + db_name + ".pkl", "wb") as meta:
                     pickle.dump(info, meta)
                     meta.close()
@@ -237,7 +239,7 @@ class Database:
         if info["tables"][table_name]["locked"] and info["tables"][table_name]["locked_by"] == self.client_id and info["tables"][table_name]["lock_type"] == "r":
             document = pickle.load(open(self.djdb_dir + "/" + db_name + "_" + table_name + ".pkl", "rb"))
             if not columns:
-                pp.pprint(document)
+                return self.apply_condition_or(document, conditions)
             else:
                 new_doc = dict()
                 for k in document:
@@ -245,10 +247,107 @@ class Database:
                     for kk in document[k]:
                         if kk in columns:
                             new_doc[k][kk] = document[k][kk]
-                pp.pprint(new_doc)
+                return self.apply_condition_or(new_doc, conditions)
 
         else:
             print "you do not have permission. you need to lock the table first"
+
+    def join(self, table1, table2, key=None, columns=None):
+        # time.sleep(3)
+        joined = dict()
+        i = 0
+        if not key:
+            for k in table1:
+                for kk in table2:
+                    if columns:
+                        if kk in columns and k in columns:
+                            joined[i] = table1[k].update(table2[kk])
+                            i += 1
+                    else:
+                        joined[i] = dict()
+                        for k1 in table1[k]:
+                            joined[i]["t1." + k1] = table1[k][k1]
+
+                        for k2 in table2[kk]:
+                            joined[i]["t2." + k2] = table2[kk][k2]
+
+                        i += 1
+            return joined
+
+    def apply_condition_or(self, data, conditions=None):
+        if not conditions:
+            return data
+        else:
+            # pp.pprint(data)
+            new_data = dict()
+            for condition in conditions:
+                # print "condition: " + str(condition)
+                for k in data:
+                    # print "K: " + str(k)
+                    if condition["p1"] in data[k] and condition["op"] in ["<", "<=", ">=", ">", "=", "!="]:
+                        if isinstance(condition["p2"], (int, float)) and isinstance(data[k][condition["p1"]], (int, float)):
+                            if condition["op"] == "<":
+                                if data[k][condition["p1"]] < condition["p2"]:
+                                    new_data[k] = data[k]
+                            elif condition["op"] == "<=":
+                                if data[k][condition["p1"]] <= condition["p2"]:
+                                    new_data[k] = data[k]
+                            elif condition["op"] == ">":
+                                if data[k][condition["p1"]] > condition["p2"]:
+                                    new_data[k] = data[k]
+                            elif condition["op"] == ">=":
+                                if data[k][condition["p1"]] >= condition["p2"]:
+                                    new_data[k] = data[k]
+                            elif condition["op"] == "=":
+                                if data[k][condition["p1"]] == condition["p2"]:
+                                    new_data[k] = data[k]
+                            elif condition["op"] == "!=":
+                                if not data[k][condition["p1"]] == condition["p2"]:
+                                    new_data[k] = data[k]
+                            else:
+                                print "ppopat"
+                                return None
+
+                        else:
+                            if condition["p2"] in data[k]:
+                                if isinstance(data[k][condition["p2"]], (int, float)) and isinstance(data[k][condition["p1"]], (int, float)):
+                                    if condition["op"] == "<":
+                                        if data[k][condition["p1"]] < data[k][condition["p2"]]:
+                                            new_data[k] = data[k]
+                                    elif condition["op"] == "<=":
+                                        if data[k][condition["p1"]] <= data[k][condition["p2"]]:
+                                            new_data[k] = data[k]
+
+                                    elif condition["op"] == ">":
+                                        if data[k][condition["p1"]] > data[k][condition["p2"]]:
+                                            new_data[k] = data[k]
+                                    elif condition["op"] == ">=":
+                                        if data[k][condition["p1"]] >= data[k][condition["p2"]]:
+                                            new_data[k] = data[k]
+                                    elif condition["op"] == "=":
+                                        if data[k][condition["p1"]] == data[k][condition["p2"]]:
+                                            new_data[k] = data[k]
+                                    elif condition["op"] == "!=":
+                                        if not data[k][condition["p1"]] == data[k][condition["p2"]]:
+                                            new_data[k] = data[k]
+                                    else:
+                                        print "ppopat"
+                                        return None
+
+                                else:
+                                    print "incorrent type"
+                                    return None
+                            else:
+                                print "incorrect column name"
+                                return None
+                    else:
+                        print "Invalid Format"
+                        return None
+
+            return new_data
+
+
+
 
 
 
